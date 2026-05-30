@@ -15,3 +15,7 @@ __pycache__/
 
 # OS files
 .DS_Store
+
+# AWS SAM build directory
+.aws-sam/
+node_modules/

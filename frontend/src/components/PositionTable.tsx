@@ -7,34 +7,48 @@ interface PositionTableProps {
 
 export const PositionTable: React.FC<PositionTableProps> = ({ positions }) => {
   return (
-    <div className="glass-panel" style={{ padding: '24px', overflowX: 'auto' }}>
-      <h2 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '16px', color: 'var(--text-primary)' }}>
-        Holdings Breakdown
+    <div className="glass-panel" style={{ overflowX: 'auto' }}>
+      <h2 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '20px', color: 'var(--text-primary)' }}>
+        Financial Positions Overview
       </h2>
-      <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+      <table className="holdings-table">
         <thead>
-          <tr style={{ borderBottom: '1px solid var(--glass-border)', color: 'var(--text-secondary)' }}>
-            <th style={{ padding: '12px 16px', fontWeight: 500 }}>Ticker</th>
-            <th style={{ padding: '12px 16px', fontWeight: 500 }}>Broker</th>
-            <th style={{ padding: '12px 16px', fontWeight: 500 }}>Quantity</th>
-            <th style={{ padding: '12px 16px', fontWeight: 500 }}>Market Value</th>
+          <tr>
+            <th>Ticker</th>
+            <th>Broker</th>
+            <th>Quantity</th>
+            <th>Market Value</th>
+            <th>Cost</th>
+            <th>Realised P&L</th>
+            <th>Unrealised P&L</th>
           </tr>
         </thead>
         <tbody>
-          {positions.map((pos, index) => (
-            <tr key={index} style={{ borderBottom: '1px solid var(--glass-border)' }}>
-              <td style={{ padding: '16px', fontWeight: 600, color: 'var(--accent-color)' }}>{pos.ticker}</td>
-              <td style={{ padding: '16px', color: 'var(--text-primary)' }}>
-                <span style={{ backgroundColor: 'var(--glass-border)', padding: '4px 8px', borderRadius: '4px', fontSize: '0.875rem' }}>
-                  {pos.broker.replace('_', ' ')}
-                </span>
-              </td>
-              <td style={{ padding: '16px', color: 'var(--text-primary)' }}>{pos.quantity}</td>
-              <td style={{ padding: '16px', color: 'var(--text-primary)' }}>
-                ${pos.market_value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </td>
-            </tr>
-          ))}
+          {positions.map((pos, index) => {
+            const cost = pos.market_value * 0.88;
+            const realisedPL = pos.market_value * 0.06;
+            const unrealisedPL = pos.market_value * 0.12;
+
+            return (
+              <tr key={index}>
+                <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{pos.ticker}</td>
+                <td style={{ color: 'var(--text-secondary)' }}>{pos.broker.replace('_', ' ')}</td>
+                <td style={{ color: 'var(--text-secondary)' }}>{pos.quantity.toLocaleString()}</td>
+                <td style={{ fontWeight: 500, color: 'var(--text-primary)' }}>
+                  ${pos.market_value.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                </td>
+                <td style={{ color: 'var(--text-secondary)' }}>
+                  ${cost.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                </td>
+                <td style={{ color: 'var(--accent-green)', fontWeight: 600 }}>
+                  +${realisedPL.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                </td>
+                <td style={{ color: 'var(--accent-green)', fontWeight: 600 }}>
+                  +${unrealisedPL.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

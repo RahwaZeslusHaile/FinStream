@@ -3,10 +3,18 @@ from fastapi import FastAPI, Depends
 from sqlalchemy.orm import Session
 from database import SessionLocal, Base, engine
 from models import Position
-
+from mangum import Mangum
+from fastapi.middleware.cors import CORSMiddleware
 
 
 app = FastAPI(title = "Fintech Aggregator API")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 def get_db():
     db = SessionLocal()
@@ -39,6 +47,8 @@ def get_broker_b_data():
 
 @app.post("/api/etl-sync")
 def sync_data(db:Session = Depends(get_db)):  
+    db.query(Position).delete()
+    
     dataA = get_broker_a_data()
     dataB = get_broker_b_data()  
     
@@ -66,9 +76,10 @@ def sync_data(db:Session = Depends(get_db)):
         positions_added += 1
 
     db.commit()
-    return{"message": "ETL Sync Completed", "positions_added": positions_added}
+    return {"message": "ETL Sync Completed", "positions_added": positions_added}
 
 @app.get("/api/positions")
 def get_positions(db:Session = Depends(get_db)):
     positions = db.query(Position).all()
     return positions
+handler = Mangum(app)
