@@ -1,0 +1,29 @@
+Awesome! If your dashboard loaded, that means your React app successfully pulled data from your serverless AWS backend!
+
+The final step of Stage 2 is to deploy your frontend so it's hosted on the internet instead of your local machine.
+
+### Step 5: Deploy Frontend to S3
+
+We will use Amazon S3 to host your React static files.
+
+1. Build your production React app. Open a new terminal tab, make sure you are in the `frontend/` directory, and run:
+   `npm run build`
+   (This creates a `dist` folder with your optimized frontend files).
+
+2. Go to the AWS Management Console in your web browser (https://console.aws.amazon.com/s3).
+3. Click "Create bucket".
+4. Bucket name: Name it something unique like `finstream-dashboard-YOURNAME` (bucket names must be globally unique!).
+5. In the "Object Ownership" section, select "ACLs enabled".
+6. Uncheck the "Block all public access" box and acknowledge the warning.
+7. Click "Create bucket" at the bottom.
+
+8. Click on your newly created bucket to open it.
+9. Go to the "Properties" tab, scroll to the very bottom, and click "Edit" on "Static website hosting".
+10. Select "Enable". Type `index.html` for both the Index document and Error document. Click "Save changes".
+
+11. Now, upload your files! Go to the "Objects" tab inside your bucket.
+12. Click "Upload", and drag everything INSIDE your `frontend/dist` folder into the bucket.
+13. Scroll down, expand "Permissions", and under "Predefined ACLs", select "Grant public-read access".
+14. Click "Upload".
+
+Once it's done, go back to the "Properties" tab, scroll to the bottom, and click the "Bucket website endpoint" link. Your FinStream dashboard is now live on the internet!

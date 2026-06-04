@@ -11,14 +11,52 @@ Resources:
       Runtime: python3.11
       Architectures:
         - x86_64
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PositionsTable
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref PositionsTable
       Events:
         ApiEvent:
           Type: HttpApi
           Properties:
             Path: /{proxy+}
             Method: ANY
-
+        CronSyncEvent:
+          Type: Schedule
+          Properties:
+            Schedule: "rate(5 minutes)"
+            Input: '{"is_cron": true}'
+  PositionsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: broker
+          AttributeType: S
+        - AttributeName: ticker
+          AttributeType: S
+      KeySchema:
+        - AttributeName: broker
+          KeyType: HASH
+        - AttributeName: ticker
+          KeyType: RANGE
+      BillingMode: PAY_PER_REQUEST
+      GlobalSecondaryIndexes:
+        - IndexName: "TickerBrokerIndex"
+          KeySchema:
+            - AttributeName: ticker
+              KeyType: HASH
+            - AttributeName: broker
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
 Outputs:
   ApiUrl:
     Description: "API Gateway endpoint URL"
     Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com/"
+  TableName:
+    Description: "DynamoDB Positions Table Name"
+    Value: !Ref PositionsTable
+
+

@@ -8,10 +8,19 @@ export interface Position{
 }
 
 export const fetchPositions = async ():Promise<Position[]> => {
-  const res = await fetch("/api/positions")
+  const res = await fetch("https://3ars6wvzxa.execute-api.us-east-1.amazonaws.com/api/positions")
   if(!res.ok){
     throw new Error('Failed to fetch positions')
   }
   return res.json()
 }
-  
+
+export const triggerEtlSync = async():Promise<{message:string,positions_added:number}> =>{
+  const res = await fetch("https://3ars6wvzxa.execute-api.us-east-1.amazonaws.com/api/etl-sync",{
+    method:"POST"
+  })
+  if(!res.ok){
+    throw new Error('Failed to trigger ETL sync')
+  }
+  return res.json()
+}

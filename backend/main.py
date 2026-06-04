@@ -1,11 +1,11 @@
 
+import os
+from decimal import Decimal
+import boto3
 from fastapi import FastAPI, Depends
-from sqlalchemy.orm import Session
-from database import SessionLocal, Base, engine
-from models import Position
-from mangum import Mangum
 from fastapi.middleware.cors import CORSMiddleware
-
+from mangum import Mangum
+from database import table
 
 app = FastAPI(title = "Fintech Aggregator API")
 app.add_middleware(
@@ -15,13 +15,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 
 @app.get("/")
@@ -45,41 +38,92 @@ def get_broker_b_data():
         {"ticker": "AMZN", "amount": 150, "market_value": 135.50},
     ]
 
-@app.post("/api/etl-sync")
-def sync_data(db:Session = Depends(get_db)):  
-    db.query(Position).delete()
-    
+def clear_positions():
+   scan_params = {"ProjectionExpression":"broker, ticker"}
+   while True:
+        response = table.scan(**scan_params)
+        items = response.get("Items",[])
+
+        with table.batch_writer() as batch:
+            for item in items:
+                batch.delete_item(
+                    Key = {
+                        "broker": item["broker"],
+                        "ticker": item["ticker"]
+                    }
+                )
+        if "LastEvaluatedKey" not in response:
+            break
+        scan_params["ExclusiveStartKey"] = response["LastEvaluatedKey"]
+        
+def run_etl_sync_logic():
+    clear_positions()
+
     dataA = get_broker_a_data()
-    dataB = get_broker_b_data()  
+    dataB = get_broker_b_data()
     
     positions_added = 0
-
-    for position in dataA["positions"]:
-        db_position = Position(
-            ticker=position["symbol"],
-            quantity = position["qty"],
-            broker = dataA["source"],
-            market_value = position["price"] * position["qty"]
-        )
-        db.add(db_position)
-        positions_added += 1
-
-    for position in dataB:
-        db_position = Position(
-            ticker=position["ticker"],
-            quantity = position["amount"],
-            broker = "Broker_B",
-            market_value = position["market_value"]
-        )
+    
+    with table.batch_writer() as batch:
+        for position in dataA["positions"]:
+            qty = Decimal(str(position["qty"]))
+            price = Decimal(str(position["price"]))
+            
+            batch.put_item(
+                Item={
+                    "broker" : dataA["source"],
+                    "ticker" : position["symbol"],
+                    "quantity" : qty,
+                    "market_value" : price * qty,
+                }
+            )
+            positions_added += 1
         
-        db.add(db_position)
-        positions_added += 1
-
-    db.commit()
-    return {"message": "ETL Sync Completed", "positions_added": positions_added}
-
+        for position in dataB:
+            qty = Decimal(str(position["amount"]))
+            mv = Decimal(str(position["market_value"]))
+            
+            batch.put_item(
+                Item={
+                    "broker" : "Broker_B",
+                    "ticker" : position["ticker"],
+                    "quantity" : qty,
+                    "market_value" : mv
+                }
+            )
+            positions_added += 1
+    return {"message": "ETL Sync Completed","positions_added": positions_added }
+        
+    
+            
+        
+@app.post("/api/etl-sync")
+def sync_data():  
+  return run_etl_sync_logic()
 @app.get("/api/positions")
-def get_positions(db:Session = Depends(get_db)):
-    positions = db.query(Position).all()
+def get_positions():
+    scan_params = {}
+    positions = []
+    while True:
+        response = table.scan(**scan_params)
+        for item in response.get("Items", []):
+            positions.append({
+                "broker": item.get("broker"),
+                "ticker": item.get("ticker"),
+                "quantity": item.get("quantity"),
+                "market_value": item.get("market_value")
+            })
+
+        if "LastEvaluatedKey" not in response:
+            break
+        scan_params["ExclusiveStartKey"] = response["LastEvaluatedKey"]
+        
     return positions
-handler = Mangum(app)
+
+def handler(event, context):
+    if isinstance(event, dict) and event.get("is_cron"):
+        print("⏰ EventBridge schedule triggered ETL sync...")
+        result = run_etl_sync_logic()
+        return result
+    asgi_handler = Mangum(app)
+    return asgi_handler(event,context)
