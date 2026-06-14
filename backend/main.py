@@ -1,5 +1,7 @@
 
 import os
+import json
+from datetime import datetime,timezone
 from decimal import Decimal
 import boto3
 from fastapi import FastAPI, Depends
@@ -15,6 +17,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+s3 = boto3.client("s3")
+RAW_DATA_BUCKET = os.getenv("RAW_DATA_BUCKET")
 
 
 @app.get("/")
@@ -57,21 +61,59 @@ def clear_positions():
         scan_params["ExclusiveStartKey"] = response["LastEvaluatedKey"]
         
 def run_etl_sync_logic():
-    clear_positions()
 
     dataA = get_broker_a_data()
     dataB = get_broker_b_data()
+
+    if RAW_DATA_BUCKET:
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        s3.put_object(
+            Bucket=RAW_DATA_BUCKET,
+            Key=f"archive/{timestamp}-broker-a.json",
+            Body=json.dumps(dataA),
+        )
+        s3.put_object(
+            Bucket=RAW_DATA_BUCKET,
+            Key=f"archive/{timestamp}-broker-b.json",
+            Body=json.dumps(dataB),
+        )
+        s3.put_object(
+            Bucket=RAW_DATA_BUCKET,
+            Key=f"raw/latest-broker-a.json",
+            Body=json.dumps(dataA),
+        )
+        s3.put_object(
+            Bucket=RAW_DATA_BUCKET,
+            Key=f"raw/latest-broker-b.json",
+            Body=json.dumps(dataB),
+        )
+    positions_a = dataA.get("positions",[])
+    broker_a_name = dataA.get("source","broker_A")
+    positions_b = dataB
+    broker_b_name = "Broker_B" 
+
+    if RAW_DATA_BUCKET:
+        try:
+            responseA = s3.get_object(Bucket=RAW_DATA_BUCKET, Key="raw/latest-broker-a.json")
+            responseB = s3.get_object(Bucket=RAW_DATA_BUCKET, Key="raw/latest-broker-b.json")
+            processed_dataA = json.loads(responseA["Body"].read().decode('utf-8'))
+            processed_dataB = json.loads(responseB["Body"].read().decode('utf-8'))
+            positions_a = processed_dataA.get("positions",[])
+            broker_a_name = processed_dataA.get("source", "broker_A")
+            positions_b = processed_dataB
+        except Exception as e:
+            print(f"Error reading s3 data: {e}")
     
     positions_added = 0
     
     with table.batch_writer() as batch:
-        for position in dataA["positions"]:
+        for position in positions_a:
             qty = Decimal(str(position["qty"]))
             price = Decimal(str(position["price"]))
             
             batch.put_item(
                 Item={
-                    "broker" : dataA["source"],
+                    "broker" : broker_a_name,
                     "ticker" : position["symbol"],
                     "quantity" : qty,
                     "market_value" : price * qty,
@@ -79,13 +121,13 @@ def run_etl_sync_logic():
             )
             positions_added += 1
         
-        for position in dataB:
+        for position in positions_b:
             qty = Decimal(str(position["amount"]))
             mv = Decimal(str(position["market_value"]))
             
             batch.put_item(
                 Item={
-                    "broker" : "Broker_B",
+                    "broker" : "broker_B",
                     "ticker" : position["ticker"],
                     "quantity" : qty,
                     "market_value" : mv
