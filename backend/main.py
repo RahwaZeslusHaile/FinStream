@@ -1,12 +1,13 @@
-
-import os
 import json
-from datetime import datetime,timezone
+import os
+from datetime import datetime, timezone
 from decimal import Decimal
+
 import boto3
-from fastapi import FastAPI, Depends
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from mangum import Mangum
+
 from database import table
 
 app = FastAPI(title = "Fintech Aggregator API")
@@ -90,7 +91,6 @@ def run_etl_sync_logic():
     positions_a = dataA.get("positions",[])
     broker_a_name = dataA.get("source","broker_A")
     positions_b = dataB
-    broker_b_name = "Broker_B" 
 
     if RAW_DATA_BUCKET:
         try:
