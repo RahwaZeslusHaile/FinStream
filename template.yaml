@@ -7,7 +7,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: backend/
-      Handler: main.handler
+      Handler: handler.handler
       Runtime: python3.11
       Architectures:
         - x86_64
