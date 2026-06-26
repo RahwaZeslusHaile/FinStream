@@ -4,10 +4,10 @@ from decimal import Decimal
 from integrations.dynamodb import table
 from integrations.s3 import load_raw, save_raw
 from mock.broker import get_broker_a_data, get_broker_b_data
+from schemas.positions import Position
 
 
 def clear_positions():
-    """Scans and clears all existing items from the DynamoDB positions table."""
     print("🧹 Clearing existing positions in DynamoDB...")
     scan_params = {"ProjectionExpression": "broker, ticker"}
     while True:
@@ -68,28 +68,26 @@ def run_etl_sync_logic():
             qty = Decimal(str(position["qty"]))
             price = Decimal(str(position["price"]))
 
-            batch.put_item(
-                Item={
-                    "broker": broker_a_name,
-                    "ticker": position["symbol"],
-                    "quantity": qty,
-                    "market_value": price * qty,
-                }
+            pos = Position(
+                broker=broker_a_name,
+                ticker=position["symbol"],
+                quantity=qty,
+                market_value=price * qty,
             )
+            batch.put_item(Item=pos.model_dump())
             positions_added += 1
 
         for position in positions_b:
             qty = Decimal(str(position["amount"]))
             mv = Decimal(str(position["market_value"]))
 
-            batch.put_item(
-                Item={
-                    "broker": broker_b_name,
-                    "ticker": position["ticker"],
-                    "quantity": qty,
-                    "market_value": mv,
-                }
+            pos = Position(
+                broker=broker_b_name,
+                ticker=position["ticker"],
+                quantity=qty,
+                market_value=mv,
             )
+            batch.put_item(Item=pos.model_dump())
             positions_added += 1
 
     print(f"✅ ETL Sync Completed. Persisted {positions_added} positions.")
