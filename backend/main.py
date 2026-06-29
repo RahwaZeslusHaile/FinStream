@@ -1,129 +1,105 @@
+from typing import Union
 
-import os
-from decimal import Decimal
-import boto3
-from fastapi import FastAPI, Depends
-from fastapi.middleware.cors import CORSMiddleware
-from mangum import Mangum
-from database import table
+from boto3.dynamodb.conditions import Key
+from fastapi import HTTPException
 
-app = FastAPI(title = "Fintech Aggregator API")
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+from app import app
+from etl.service import run_etl_sync_logic
+from integrations.dynamodb import table
+from mock.broker import get_broker_a_data, get_broker_b_data
+from schemas.brokers import BrokerAResponse, BrokerBPosition
+from schemas.etl import EtlSyncResponse
+from schemas.positions import Position
+from services.positions import map_to_position
 
 
 @app.get("/")
 def read_root():
     return {"Hello": "World"}
 
-@app.get("/mock/broker-a")
-def get_broker_a_data():
-    return {
-        "source": "Broker_A",
-        "positions": [
-            {"symbol": "AAPL", "qty": 100, "price": 150.25},
-            {"symbol": "TSLA", "qty": -50, "price": 200.50},
-        ]
-    }
 
-@app.get("/mock/broker-b")
-def get_broker_b_data():
-    return [
-        {"ticker": "MSFT", "amount": 200, "market_value": 310.00},
-        {"ticker": "AMZN", "amount": 150, "market_value": 135.50},
-    ]
+@app.get("/mock/broker-a", response_model=BrokerAResponse)
+def get_broker_a():
+    return get_broker_a_data()
 
-def clear_positions():
-   scan_params = {"ProjectionExpression":"broker, ticker"}
-   while True:
-        response = table.scan(**scan_params)
-        items = response.get("Items",[])
 
-        with table.batch_writer() as batch:
-            for item in items:
-                batch.delete_item(
-                    Key = {
-                        "broker": item["broker"],
-                        "ticker": item["ticker"]
-                    }
-                )
-        if "LastEvaluatedKey" not in response:
-            break
-        scan_params["ExclusiveStartKey"] = response["LastEvaluatedKey"]
-        
-def run_etl_sync_logic():
-    clear_positions()
+@app.get("/mock/broker-b", response_model=list[BrokerBPosition])
+def get_broker_b():
+    return get_broker_b_data()
 
-    dataA = get_broker_a_data()
-    dataB = get_broker_b_data()
-    
-    positions_added = 0
-    
-    with table.batch_writer() as batch:
-        for position in dataA["positions"]:
-            qty = Decimal(str(position["qty"]))
-            price = Decimal(str(position["price"]))
-            
-            batch.put_item(
-                Item={
-                    "broker" : dataA["source"],
-                    "ticker" : position["symbol"],
-                    "quantity" : qty,
-                    "market_value" : price * qty,
-                }
-            )
-            positions_added += 1
-        
-        for position in dataB:
-            qty = Decimal(str(position["amount"]))
-            mv = Decimal(str(position["market_value"]))
-            
-            batch.put_item(
-                Item={
-                    "broker" : "Broker_B",
-                    "ticker" : position["ticker"],
-                    "quantity" : qty,
-                    "market_value" : mv
-                }
-            )
-            positions_added += 1
-    return {"message": "ETL Sync Completed","positions_added": positions_added }
-        
-    
-            
-        
-@app.post("/api/etl-sync")
-def sync_data():  
-  return run_etl_sync_logic()
-@app.get("/api/positions")
+
+@app.get(
+    "/mock/{broker_name}",
+    response_model=Union[BrokerAResponse, list[BrokerBPosition]],
+    summary="Get mock broker data",
+    description="Returns mock data for the specified broker.",
+)
+def get_mock_broker(broker_name: str):
+    name = broker_name.lower()
+    if name in ("broker-a", "a"):
+        return get_broker_a_data()
+    elif name in ("broker-b", "b"):
+        return get_broker_b_data()
+    raise HTTPException(
+        status_code=404,
+        detail=(
+            f"Mock broker source '{broker_name}' not found."
+            " Use 'broker-a' or 'broker-b'."
+        ),
+    )
+
+
+@app.post(
+    "/api/etl-sync",
+    response_model=EtlSyncResponse,
+    summary="Trigger ETL sync",
+    description="Ingests raw broker data, normalizes it, and persists to DynamoDB.",
+)
+def sync_data():
+    return run_etl_sync_logic()
+
+
+@app.get(
+    "/api/positions",
+    response_model=list[Position],
+    summary="Get all positions",
+    description="Returns a list of all positions from the database.",
+)
 def get_positions():
     scan_params = {}
     positions = []
     while True:
         response = table.scan(**scan_params)
         for item in response.get("Items", []):
-            positions.append({
-                "broker": item.get("broker"),
-                "ticker": item.get("ticker"),
-                "quantity": item.get("quantity"),
-                "market_value": item.get("market_value")
-            })
+            positions.append(map_to_position(item))
 
         if "LastEvaluatedKey" not in response:
             break
         scan_params["ExclusiveStartKey"] = response["LastEvaluatedKey"]
-        
+
     return positions
 
-def handler(event, context):
-    if isinstance(event, dict) and event.get("is_cron"):
-        print("⏰ EventBridge schedule triggered ETL sync...")
-        result = run_etl_sync_logic()
-        return result
-    asgi_handler = Mangum(app)
-    return asgi_handler(event,context)
+
+@app.get("/api/positions/{broker}", response_model=list[Position])
+def get_positions_by_broker(broker: str):
+    response = table.query(KeyConditionExpression=Key("broker").eq(broker))
+    items = response.get("Items", [])
+    mapped_positions = [map_to_position(item) for item in items]
+    if not mapped_positions:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No positions found for broker '{broker}'.",
+        )
+    return mapped_positions
+
+
+@app.get("/api/positions/{broker}/{ticker}", response_model=Position)
+def get_position(broker: str, ticker: str):
+    response = table.get_item(Key={"broker": broker, "ticker": ticker})
+    item = response.get("Item")
+    if not item:
+        raise HTTPException(
+            status_code=404,
+            detail=(f"Position for broker '{broker}' and ticker '{ticker}' not found."),
+        )
+    return map_to_position(item)

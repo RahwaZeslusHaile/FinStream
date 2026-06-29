@@ -7,16 +7,19 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: backend/
-      Handler: main.handler
+      Handler: handler.handler
       Runtime: python3.11
       Architectures:
         - x86_64
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref PositionsTable
+        - S3CrudPolicy:
+            BucketName: !Ref RawDataBucket
       Environment:
         Variables:
           TABLE_NAME: !Ref PositionsTable
+          RAW_DATA_BUCKET: !Ref RawDataBucket
       Events:
         ApiEvent:
           Type: HttpApi
@@ -51,6 +54,8 @@ Resources:
               KeyType: RANGE
           Projection:
             ProjectionType: ALL
+  RawDataBucket:
+    Type: AWS::S3::Bucket
 Outputs:
   ApiUrl:
     Description: "API Gateway endpoint URL"
