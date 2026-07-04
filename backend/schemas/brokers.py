@@ -13,6 +13,11 @@ class BrokerAResponse(BaseModel):
     source: str
     positions: list[BrokerAPosition]
 
+class BrokerBResponse(BaseModel):
+    ticker: str
+    amount: Decimal
+    market_value: Decimal
+
 
 class BrokerBPosition(BaseModel):
     ticker: str
