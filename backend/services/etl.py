@@ -1,10 +1,11 @@
 from datetime import datetime, timezone
 from decimal import Decimal
 
+from domain.broker import BrokerName
 from integrations.dynamodb import table
 from integrations.s3 import load_raw, save_raw
-from mock.broker import get_broker_a_data, get_broker_b_data
 from schemas.positions import Position
+from services.broker_registery import BROKER_REGISTRY
 
 
 def clear_positions():
@@ -26,8 +27,8 @@ def clear_positions():
 
 def run_etl_sync_logic():
     print("📥 Ingesting raw data from mock brokers...")
-    dataA = get_broker_a_data()
-    dataB = get_broker_b_data()
+    dataA = BROKER_REGISTRY[BrokerName.broker_a]()
+    dataB = BROKER_REGISTRY[BrokerName.broker_b]()
 
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
     save_raw(f"archive/{timestamp}-broker-a.json", dataA)

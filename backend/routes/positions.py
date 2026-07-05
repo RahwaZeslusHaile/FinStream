@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 
+from domain.broker import BrokerName
 from schemas.positions import Position
 from services.positions import (
     get_all_positions_service,
@@ -21,10 +22,10 @@ def get_all_positions():
 
 
 @router.get("/positions/{broker}", response_model=list[Position])
-def get_positions_by_broker(broker: str):
+def get_positions_by_broker(broker: BrokerName):
     return get_positions_by_broker_service(broker)
 
 
 @router.get("/positions/{broker}/{ticker}", response_model=Position)
-def get_position(broker: str, ticker: str):
+def get_position(broker: BrokerName, ticker: str):
     return get_position_service(broker, ticker)

@@ -1,8 +1,7 @@
 from mangum import Mangum
 
-import main  
-from app import app
-from etl.service import run_etl_sync_logic
+from main import app
+from services.etl import run_etl_sync_logic
 
 
 def handler(event, context):
