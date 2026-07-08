@@ -1,95 +1,57 @@
 from datetime import datetime, timezone
-from decimal import Decimal
 
 from domain.broker import BrokerName
-from integrations.dynamodb import table
 from integrations.s3 import load_raw, save_raw
-from schemas.positions import Position
+from mappers.registery import NORMALIZER_REGISTRY
+from repositories.etl import delete_all_positions_repo, save_positions_repo
 from services.broker_registery import BROKER_REGISTRY
 
 
-def clear_positions():
-    print("🧹 Clearing existing positions in DynamoDB...")
-    scan_params = {"ProjectionExpression": "broker, ticker"}
-    while True:
-        response = table.scan(**scan_params)
-        items = response.get("Items", [])
+def fetch_broker_data():
+    return {
+        BrokerName.broker_a: BROKER_REGISTRY[BrokerName.broker_a](),
+        BrokerName.broker_b: BROKER_REGISTRY[BrokerName.broker_b](),
+    }
 
-        with table.batch_writer() as batch:
-            for item in items:
-                batch.delete_item(
-                    Key={"broker": item["broker"], "ticker": item["ticker"]}
-                )
-        if "LastEvaluatedKey" not in response:
-            break
-        scan_params["ExclusiveStartKey"] = response["LastEvaluatedKey"]
+
+def archive_raw_data(data: dict):
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    save_raw(
+        f"archive/{timestamp}-{BrokerName.broker_a}.json", data[BrokerName.broker_a]
+    )
+    save_raw(
+        f"archive/{timestamp}-{BrokerName.broker_b}.json", data[BrokerName.broker_b]
+    )
+
+
+def load_broker_data(data):
+    raw_data = {}
+    for broker, payload in data.items():
+        loaded = load_raw(f"raw/{broker}.json")
+        if loaded is None:
+            print(
+                f"⚠️ Warning: S3 load failed for {broker}. Falling back to in-memory data."
+            )
+            loaded = payload
+        raw_data[broker] = loaded
+    return raw_data
+
+
+def normalize_positions(raw_data):
+    positions = []
+    for broker, data in raw_data.items():
+        normalizer = NORMALIZER_REGISTRY[broker]
+        positions.extend(normalizer(data))
+    return positions
 
 
 def run_etl_sync_logic():
     print("📥 Ingesting raw data from mock brokers...")
-    dataA = BROKER_REGISTRY[BrokerName.broker_a]()
-    dataB = BROKER_REGISTRY[BrokerName.broker_b]()
 
-    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-    save_raw(f"archive/{timestamp}-broker-a.json", dataA)
-    save_raw(f"archive/{timestamp}-broker-b.json", dataB)
-    save_raw("raw/broker-a.json", dataA)
-    save_raw("raw/broker-b.json", dataB)
-
-    print("🔄 Loading raw data from S3 storage layer...")
-    raw_a = load_raw("raw/broker-a.json")
-    raw_b = load_raw("raw/broker-b.json")
-
-    if raw_a is None:
-        print("⚠️ Warning: S3 load failed for Broker A. Falling back to in-memory data.")
-        raw_a = dataA
-    if raw_b is None:
-        print("⚠️ Warning: S3 load failed for Broker B. Falling back to in-memory data.")
-        raw_b = dataB
-
-    positions_a = raw_a.get("positions", []) if isinstance(raw_a, dict) else []
-    broker_a_name = (
-        raw_a.get("source", "Broker_A") if isinstance(raw_a, dict) else "Broker_A"
-    )
-
-    if isinstance(raw_b, dict):
-        positions_b = raw_b.get("positions", [])
-        broker_b_name = raw_b.get("source", "Broker_B")
-    else:
-        positions_b = raw_b if isinstance(raw_b, list) else []
-        broker_b_name = "Broker_B"
-
-    clear_positions()
-
-    print("💾 Writing fresh normalized positions to DynamoDB...")
-    positions_added = 0
-
-    with table.batch_writer() as batch:
-        for position in positions_a:
-            qty = Decimal(str(position["qty"]))
-            price = Decimal(str(position["price"]))
-
-            pos = Position(
-                broker=broker_a_name,
-                ticker=position["symbol"],
-                quantity=qty,
-                market_value=price * qty,
-            )
-            batch.put_item(Item=pos.model_dump())
-            positions_added += 1
-
-        for position in positions_b:
-            qty = Decimal(str(position["amount"]))
-            mv = Decimal(str(position["market_value"]))
-
-            pos = Position(
-                broker=broker_b_name,
-                ticker=position["ticker"],
-                quantity=qty,
-                market_value=mv,
-            )
-            batch.put_item(Item=pos.model_dump())
-            positions_added += 1
-
-    print(f"✅ ETL Sync Completed. Persisted {positions_added} positions.")
-    return {"message": "ETL Sync Completed", "positions_added": positions_added}
+    broker_data = fetch_broker_data()
+    archive_raw_data(broker_data)
+    raw_data = load_broker_data(broker_data)
+    positions = normalize_positions(raw_data)
+    delete_all_positions_repo()
+    save_positions_repo(positions)
+    return {"message": "ETL Sync Completed", "positions_added": len(positions)}
