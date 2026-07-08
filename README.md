@@ -25,6 +25,58 @@ A Prime Broker Data Aggregator & Treasury Management Dashboard. This project is 
 
 ---
 
+## 💻 How to Run Locally
+
+You can run both the backend and frontend locally by following these steps:
+
+### 1. Run the Backend (FastAPI)
+1. Navigate to the backend directory:
+   ```bash
+   cd backend
+   ```
+2. Activate the virtual environment:
+   ```bash
+   source .venv/bin/activate
+   ```
+3. (Optional) Install dependencies if not already set up:
+   * If using `uv` (recommended):
+     ```bash
+     uv sync
+     ```
+   * If using standard `pip`:
+     ```bash
+     pip install -e .
+     ```
+4. Start the FastAPI development server:
+   ```bash
+   uvicorn main:app --reload
+   ```
+   The backend will now be running at `http://127.0.0.1:8000`.
+
+*Note: Since the backend accesses DynamoDB and S3, ensure you have your AWS credentials configured locally (e.g., via `aws configure`), or set appropriate mock environment variables if testing offline.*
+
+### 2. Run the Frontend (React + Vite)
+1. Navigate to the frontend directory:
+   ```bash
+   cd frontend
+   ```
+2. Install the frontend dependencies:
+   ```bash
+   npm install
+   ```
+3. Run the development server:
+   ```bash
+   npm run dev
+   ```
+   The frontend dashboard will be accessible at `http://localhost:5173` (or the port specified in your terminal).
+
+### 3. Connect Frontend to Local Backend
+By default, [api.ts](file:///Users/cyf/Desktop/Rahwa-development/FinStream/frontend/src/api.ts) might point to an AWS API Gateway endpoint. To point it to your local backend server:
+* Open [api.ts](file:///Users/cyf/Desktop/Rahwa-development/FinStream/frontend/src/api.ts) and change the base fetch URLs to use `http://127.0.0.1:8000` (e.g. `http://127.0.0.1:8000/api/positions` and `http://127.0.0.1:8000/api/etl-sync`).
+
+---
+
+
 ## 🧭 How FinStream maps to AWS (Learning Goals)
 
 This project is structured to teach 4 real cloud problems:
@@ -84,8 +136,106 @@ S3 (raw broker data)
 Right now the MVP has an "ETL endpoint you manually call". In the AWS version, this becomes an **"event-driven ETL system that runs automatically"**. This is the biggest conceptual shift you will learn.
 
 ## 🧪 Suggested Learning Milestones
-* **Week 1:** Local MVP working
-* **Week 2:** Deploy FastAPI to Lambda, connect API Gateway
-* **Week 3:** Deploy React to S3 + CloudFront
-* **Week 4:** Add RDS or DynamoDB, replace SQLite
-* **Week 5:** Add EventBridge ETL automation
+* [x] **Week 1:** Local MVP working
+* [x] **Week 2:** Deploy FastAPI to Lambda, connect API Gateway
+* [x] **Week 3:** Deploy React to S3 + CloudFront
+* [x] **Week 4:** Add RDS or DynamoDB, replace SQLite
+* [x] **Week 5:** Add EventBridge ETL automation
+---
+
+## 🧪 Stage 4: Python Backend Testing Strategy
+
+To ensure code quality and robustness of the backend logic, implement the following testing layers in Python.
+
+### 📁 Backend Directory & Test Structure
+
+Here is the updated layout of your backend structure, showing how the new mappers, repositories, services, and tests are organized:
+
+```text
+backend/
+├── clients/                  # Raw simulated Broker API callers
+│   ├── broker_a_client.py
+│   └── broker_b_client.py
+├── domain/                   # Domain entities and enums (e.g. BrokerName)
+│   └── broker.py
+├── integrations/             # AWS Database & Storage connection modules
+│   ├── dynamodb.py
+│   └── s3.py
+├── mappers/                  # Normalization logic translating raw data to schemas
+│   ├── broker_a.py           # Broker A normalizer
+│   ├── broker_b.py           # Broker B normalizer
+│   ├── positions.py          # Unified database model mapper
+│   └── registery.py          # Normalizer lookup registry
+├── repositories/             # Database access and CRUD queries (no logic)
+│   ├── etl.py                # Database save/clear queries
+│   └── position.py           # Positions DB query logic
+├── routes/                   # FastAPI route definitions
+│   ├── brokers.py
+│   ├── etl.py
+│   └── positions.py
+├── schemas/                  # Pydantic schemas (data shapes for API responses)
+│   └── positions.py
+├── services/                 # Business logic orchestrating repositories & clients
+│   ├── broker_registery.py
+│   ├── brokers.py
+│   ├── etl.py                # Main ETL execution flow
+│   └── positions.py          # Positions compilation and fetch logic
+├── tests/                    # Pytest suite
+│   ├── __init__.py
+│   ├── conftest.py            # Global fixtures (e.g., mock table clients)
+│   ├── unit/
+│   │   ├── __init__.py
+│   │   └── test_mappers.py    # Tests for normalizers/mappers
+│   └── integration/
+│       ├── __init__.py
+│       ├── test_repos.py      # Tests database repository functions
+│       └── test_routes.py     # Tests FastAPI API endpoints
+├── handler.py                # Serverless Lambda entrypoint handler
+├── main.py                   # FastAPI local runner setup
+└── pyproject.toml            # Project dependencies and config
+```
+
+
+
+### Phase 1: Python Unit Tests — ETL & Data Normalization
+Unit tests validating data mapping, conversions, and edge cases inside [mappers/](file:///Users/cyf/Desktop/Rahwa-development/FinStream/backend/mappers/):
+* **Broker A Normalization:** Validate `normalize_broker_a` translates symbol to ticker, calculates `market_value = qty * price`, and handles positive/negative quantities correctly.
+* **Broker B Normalization:** Validate `normalize_broker_b` maps keys correctly and handles data arrays.
+* **Edge Case Mapping:** Validate mappers handle missing fields, null payloads, and zero values gracefully.
+
+### Phase 2: Python Integration Tests — API Endpoints
+Tests using `fastapi.testclient.TestClient` to verify the request/response cycle, route status codes, and JSON serialization:
+* **GET `/api/positions`:** Verify returns correct schema list.
+* **GET `/api/positions/{broker}`:** Verify returns 404 for unknown brokers and 200 with data for valid ones.
+* **POST `/api/etl-sync`:** Verify triggers the ETL flow and reports the correct number of persisted records.
+* **Exception Handlers:** Verify corrupted position mapping translates to correct HTTP response status codes.
+
+### Phase 3: Python Repository Tests — DynamoDB Operations
+Mocked database tests validating CRUD functionality without hitting the live AWS environment:
+* **Mocking:** Use `moto` or local mocks to intercept DynamoDB table actions safely.
+* **Clear Table:** Validate `delete_all_positions_repo` deletes all entries cleanly.
+* **Batch Writes:** Validate `save_positions_repo` persists position records correctly without duplicates.
+* **Queries & Scans:** Validate paginated scans (`scan_all_positions`), single queries (`get_position_item`), and partition key queries (`query_positions_by_broker`).
+
+---
+
+## 🛠️ Python Testing Tech Stack
+
+Configure your testing environment using the following standard tools:
+
+* **Framework:** `pytest` (standard Python testing framework)
+* **Mocking:** `pytest-mock` (for utility patching) & `moto` (for DynamoDB mock tables)
+* **Coverage:** `pytest-cov` (tracks lines executed)
+* **FastAPI Client:** `TestClient` (for local route testing)
+
+### Installation
+Run within your backend directory:
+```bash
+pip install pytest pytest-mock moto pytest-cov
+```
+
+### Execution
+Run tests locally with:
+```bash
+pytest
+```
