@@ -6,6 +6,3 @@ def get_broker_a_data():
             {"symbol": "TSLA", "qty": -50, "price": 200.50},
         ],
     }
-
-
-
