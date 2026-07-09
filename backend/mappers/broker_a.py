@@ -1,5 +1,6 @@
 from decimal import Decimal
 
+from domain.broker import BrokerName
 from schemas.positions import Position
 
 
@@ -10,7 +11,7 @@ def normalize_broker_a(data: dict) -> list[Position]:
         price = Decimal(str(item["price"]))
         positions.append(
             Position(
-                broker=data.get("source", "Broker_A"),
+                broker=BrokerName.broker_a,
                 ticker=item["symbol"],
                 quantity=qty,
                 market_value=qty * price,
