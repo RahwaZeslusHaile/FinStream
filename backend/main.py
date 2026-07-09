@@ -1,9 +1,12 @@
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from routes.brokers import router as broker_router
-from routes.etl import router as etl_router
-from routes.positions import router as position_router
+load_dotenv()
+
+from routes.brokers import router as broker_router  # noqa: E402
+from routes.etl import router as etl_router  # noqa: E402
+from routes.positions import router as position_router  # noqa: E402
 
 app = FastAPI(title="FinStream API")
 
