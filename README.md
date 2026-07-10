@@ -1,241 +1,756 @@
 # FinStream
 
-A Prime Broker Data Aggregator & Treasury Management Dashboard. This project is designed to ingest, normalize, and visualize financial data from various simulated prime brokers.
+# Prime Broker Data Aggregator & Treasury Management Dashboard
 
-## Minimum Viable Product (MVP) Scope
+FinStream is a fintech backend application designed to ingest, normalize, store, and visualize portfolio position data from multiple simulated prime brokers.
 
-### 1. The Backend (FastAPI + SQLite)
-* **Database:** Local SQLite database to ensure a streamlined setup and fast querying without complex configuration.
-* **Mock APIs:** Routes that return hardcoded, unstandardized JSON data to simulate two distinct Prime Brokers (e.g., Broker A and Broker B).
-* **The Normalizer (ETL) Endpoint:** A core endpoint (e.g., `GET /api/etl-sync`) responsible for fetching the raw mock data, normalizing it into a standardized format, and persisting it to the SQLite database.
-* **The Client API:** An endpoint (e.g., `GET /api/positions`) that the frontend consumes to retrieve the cleaned, aggregated position data.
+The project demonstrates production-style backend engineering practices including:
 
-### 2. The Frontend (React + TypeScript)
-* **Design Aesthetic:** A single dashboard view utilizing a modern, premium dark-mode UI with glassmorphism elements.
-* **Key Metric Cards:** High-level metrics calculated by the backend, displayed prominently:
-  * **Total Exposure:** The aggregate sum of all market values.
-  * **Daily Financing Cost:** The calculated cost to hold current positions.
-* **Data Table:** A comprehensive table displaying the normalized data across brokers, detailing the Ticker, Broker, Quantity, Market Value, and Cost.
-* **Data Visualization:** A Recharts Donut Chart illustrating how the total exposure is distributed among the different Prime Brokers.
+- REST API development with FastAPI
+- ETL pipeline design
+- Data normalization
+- AWS cloud architecture
+- Database abstraction
+- Layered backend architecture
+- Testing strategies
+- Error handling and logging
 
-## Tech Stack
-* **Frontend:** React, TypeScript, Recharts
-* **Backend:** FastAPI, Python, SQLite, SQLAlchemy
-* **Deployment (Planned):** AWS Lambda (via Mangum)
+The goal of FinStream is to simulate how financial institutions consolidate fragmented portfolio data from different broker systems into one standardized platform.
 
 ---
 
-## 💻 How to Run Locally
+# 🚦 Project Status
 
-You can run both the backend and frontend locally by following these steps:
+Current implementation:
 
-### 1. Run the Backend (FastAPI)
-1. Navigate to the backend directory:
-   ```bash
-   cd backend
-   ```
-2. Activate the virtual environment:
-   ```bash
-   source .venv/bin/activate
-   ```
-3. (Optional) Install dependencies if not already set up:
-   * If using `uv` (recommended):
-     ```bash
-     uv sync
-     ```
-   * If using standard `pip`:
-     ```bash
-     pip install -e .
-     ```
-4. Start the FastAPI development server:
-   ```bash
-   uvicorn main:app --reload
-   ```
-   The backend will now be running at `http://127.0.0.1:8000`.
+✅ Multi-broker ingestion pipeline
+✅ Broker registry pattern
+✅ Data normalization layer
+✅ S3 raw data archival
+✅ DynamoDB persistence
+✅ FastAPI REST API
+✅ React dashboard
+✅ AWS Lambda deployment architecture
+✅ Layered backend architecture
 
-*Note: Since the backend accesses DynamoDB and S3, ensure you have your AWS credentials configured locally (e.g., via `aws configure`), or set appropriate mock environment variables if testing offline.*
+In progress:
 
-### 2. Run the Frontend (React + Vite)
-1. Navigate to the frontend directory:
-   ```bash
-   cd frontend
-   ```
-2. Install the frontend dependencies:
-   ```bash
-   npm install
-   ```
-3. Run the development server:
-   ```bash
-   npm run dev
-   ```
-   The frontend dashboard will be accessible at `http://localhost:5173` (or the port specified in your terminal).
-
-### 3. Connect Frontend to Local Backend
-By default, [api.ts](file:///Users/cyf/Desktop/Rahwa-development/FinStream/frontend/src/api.ts) might point to an AWS API Gateway endpoint. To point it to your local backend server:
-* Open [api.ts](file:///Users/cyf/Desktop/Rahwa-development/FinStream/frontend/src/api.ts) and change the base fetch URLs to use `http://127.0.0.1:8000` (e.g. `http://127.0.0.1:8000/api/positions` and `http://127.0.0.1:8000/api/etl-sync`).
+🚧 Automated test coverage with Pytest
+🚧 EventBridge scheduled ETL execution
+🚧 Terraform infrastructure provisioning
 
 ---
 
+# 📸 Application Preview
 
-## 🧭 How FinStream maps to AWS (Learning Goals)
+## Dashboard
 
-This project is structured to teach 4 real cloud problems:
-* **FastAPI backend** ➔ API hosting (Lambda / ECS)
-* **ETL sync endpoint** ➔ Event-driven processing
-* **SQLite DB** ➔ Database scaling (RDS / DynamoDB)
-* **React dashboard** ➔ Static hosting (S3 + CloudFront)
+![FinStream Dashboard](docs/images/dashboard.png)
 
-## 🚀 AWS Evolution Plan
+FinStream provides a dashboard view of consolidated portfolio positions across multiple simulated prime brokers.
 
-To ensure a smooth learning curve, the project will be built in stages:
+Features demonstrated:
 
-### 🥉 Stage 1 — "Local MVP"
-Keep everything local to make sure the core logic works:
-* FastAPI (monolith)
-* SQLite
-* Mock broker endpoints
-* ETL endpoint
-* React dashboard
-**👉 Goal:** Make everything work locally first.
+- Portfolio exposure overview
+- Normalized broker positions
+- ETL synchronization workflow
+- Cloud-hosted backend architecture
 
-### 🥈 Stage 2 — "First AWS Deployment (Simple Hosting)"
-* **Backend:** Deploy FastAPI using AWS Lambda + API Gateway (using Mangum to adapt FastAPI to Lambda).
-  * *What you learn:* Serverless basics, API Gateway routing, Cold starts.
-* **Frontend:** Build React to static files and host on S3 (static hosting) + CloudFront (CDN).
-  * *What you learn:* CDN concepts, S3 hosting, Cache behavior.
+---
 
-### 🥇 Stage 3 — "Real Cloud Architecture Upgrade"
-Now the project becomes a "real fintech-like architecture".
-* **Database Upgrade:** Replace SQLite with **Amazon RDS** (recommended for learning SQL systems) or **Amazon DynamoDB** (for event-driven scaling).
-* **Proper ETL Pipeline:** Instead of calling `/etl-sync` manually, use an **EventBridge schedule** (runs every X minutes) to trigger a **Lambda ETL function**.
-  * *What you learn:* Scheduled cloud jobs, decoupled systems.
-* **Storage Layer (Optional):** Store raw broker JSON in Amazon S3, and store normalized data in the database.
-  * *What you learn:* Data lake pattern, raw vs processed data separation.
+# 🏗️ Architecture Overview
 
-### 🏗 Stage 4 — "Production-Style Architecture"
-Simulate real fintech infrastructure:
-* **Security & Observability:** Add IAM roles (security), CloudWatch logs (observability), API throttling (API Gateway), and Secrets Manager (for DB credentials).
-  * *What you learn:* Security best practices, monitoring, production constraints.
+FinStream follows a layered architecture based on separation of concerns.
 
-## 🧠 Recommended Architecture (Final Goal)
 ```text
-React (S3 + CloudFront)
-        ↓
-API Gateway
-        ↓
-Lambda (FastAPI via Mangum)
-        ↓
-RDS (normalized data)
-        ↑
-EventBridge (scheduled ETL Lambda)
-        ↑
-S3 (raw broker data)
+                         React Dashboard
+                               |
+                               |
+                               v
+                         FastAPI Routes
+                               |
+                               |
+                               v
+                         Service Layer
+                    (Business Logic + ETL)
+                               |
+          -----------------------------------------
+          |                    |                  |
+          v                    v                  v
+   Broker Registry        Mappers          Repositories
+          |                    |                  |
+          v                    v                  v
+   Broker Clients       Position Schema      DynamoDB
+          |
+          v
+ External Broker APIs
+
+Raw Payload Archive
+          |
+          v
+         S3
 ```
 
-**💡 Key Design Insight:** 
-Right now the MVP has an "ETL endpoint you manually call". In the AWS version, this becomes an **"event-driven ETL system that runs automatically"**. This is the biggest conceptual shift you will learn.
 
-## 🧪 Suggested Learning Milestones
-* [x] **Week 1:** Local MVP working
-* [x] **Week 2:** Deploy FastAPI to Lambda, connect API Gateway
-* [x] **Week 3:** Deploy React to S3 + CloudFront
-* [x] **Week 4:** Add RDS or DynamoDB, replace SQLite
-* [x] **Week 5:** Add EventBridge ETL automation
+Each layer has a clear responsibility:
+
+| Layer | Responsibility |
+|---|---|
+| Routes | Handle HTTP requests and responses |
+| Services | Business logic and ETL workflows |
+| Repositories | Database persistence and retrieval |
+| Clients | Fetch external broker data |
+| Mappers | Transform different broker formats |
+| Schemas | Validate application data models |
+
 ---
 
-## 🧪 Stage 4: Python Backend Testing Strategy
+# 🚀 Project Features
 
-To ensure code quality and robustness of the backend logic, implement the following testing layers in Python.
+## Multi-Broker Data Ingestion
 
-### 📁 Backend Directory & Test Structure
+FinStream integrates with multiple simulated prime brokers.
 
-Here is the updated layout of your backend structure, showing how the new mappers, repositories, services, and tests are organized:
+Currently supported:
 
+- Broker A
+- Broker B
+
+Each broker provides different data structures, which are normalized into a common format.
+
+---
+
+## Data Normalization
+
+Different brokers expose different schemas.
+
+Example:
+
+### Broker A
+```json
+{
+  "symbol": "AAPL",
+  "qty": 100,
+  "price": 200
+}
+```
+
+### Broker B
+```json
+{
+  "ticker": "AAPL",
+  "amount": 100,
+  "market_value": 20000
+}
+```
+
+Both are transformed into:
+
+```python
+Position(
+     broker="broker-a",
+     ticker="AAPL",
+     quantity=100,
+     market_value=20000,
+)
+```
+
+This allows the rest of the application to work with a consistent data model.
+
+## 🔄 ETL Pipeline
+
+The ETL workflow follows these steps:
+
+```text
+Broker APIs
+     |
+     v
+Fetch Raw Data
+     |
+     v
+Archive Raw Payloads (S3)
+     |
+     v
+Load Raw Data
+     |
+     v
+Normalize Broker Data
+     |
+     v
+Validate Normalized Data
+     |
+     v
+Persist Positions (DynamoDB)
+```
+
+### ETL Reliability & Sync Abort Guard
+
+The ETL pipeline is designed to be highly resilient against network exceptions, schema differences, and persistence errors.
+
+Before modifying the database:
+* **Fail-Safe Ingestion:** Individual broker fetches are isolated inside `try-except` blocks. If any broker fails to respond, the pipeline logs the failure in a `failed_brokers` dictionary.
+* **Sync Abort Guard (No Data Loss):** If any broker fails to fetch, the sync **aborts immediately** before executing `delete_all_positions_repo()`. This prevents a partial database sync and protects historic data integrity.
+* **Granular Normalization Isolation:** Data normalization runs in separate scopes per broker. If normalization fails for one broker, the pipeline logs a detailed warning traceback and continues with the others.
+* **Type-Safe API Contracts:** All error and abort response dictionaries are structured to return `"positions_added": 0` and error descriptions to comply with FastAPI schema validation.
+
+## 🔌 Broker Registry Pattern
+
+Instead of hardcoding every broker:
+
+```python
+BROKER_REGISTRY = {
+    BrokerName.BROKER_A: get_broker_a_data,
+    BrokerName.BROKER_B: get_broker_b_data,
+}
+```
+
+The registry pattern avoids modifying the core ETL pipeline when new integrations are introduced.
+
+The ETL engine depends on abstractions:
+
+Broker Fetcher → Raw Payload → Mapper → Position Schema
+
+rather than broker-specific implementations.
+
+Adding a new broker only requires registration:
+
+```python
+BROKER_REGISTRY[BrokerName.BROKER_C] = get_broker_c_data
+```
+
+No changes are required in the core ETL workflow. Adding a new broker only requires registering the fetcher and providing the required normalization logic.
+
+Benefits:
+
+Easier scaling
+Less duplicated code
+Follows Open/Closed Principle
+## 🧩 Backend Architecture
+
+### Routes Layer
+
+Routes are responsible only for API communication.
+
+Example:
+
+```text
+GET /api/positions
+GET /api/positions/{broker}
+GET /api/positions/{broker}/{ticker}
+```
+
+Routes do not contain:
+
+Database queries
+ETL logic
+Business rules
+### Service Layer
+
+The service layer contains application logic.
+
+Responsibilities:
+
+Coordinate ETL execution
+Fetch broker data
+Apply business rules
+Validate workflows
+Handle errors
+Manage logging
+
+Example:
+
+```text
+Route
+     |
+     v
+Service
+     |
+     v
+Repository
+     |
+     v
+Database
+```
+### Repository Layer
+
+Repositories isolate database operations.
+
+Responsibilities:
+
+DynamoDB scans
+DynamoDB queries
+DynamoDB writes
+Database retrieval
+
+Repositories are responsible only for persistence operations. They hide DynamoDB-specific implementation details from the service layer.
+
+Example:
+
+```text
+Service
+     |
+     v
+Repository
+     |
+     v
+DynamoDB
+```
+
+This makes it easier to replace DynamoDB with another database in the future.
+
+## Why DynamoDB?
+
+DynamoDB was selected because the application's access patterns are predictable:
+
+- Retrieve all positions
+- Retrieve positions by broker
+- Retrieve one position by broker and ticker
+
+The table design:
+
+PK: broker
+
+SK: ticker
+
+allows efficient:
+
+- Query operations by broker
+- GetItem operations using broker + ticker
+- Serverless scaling without managing infrastructure
+
+For a highly relational financial system, a relational database could also be suitable. DynamoDB was chosen here to explore cloud-native serverless architecture.
+
+## 📚 API Documentation
+
+FastAPI automatically generates interactive API documentation.
+
+Available locally:
+
+Swagger UI:
+
+http://localhost:8000/docs
+
+ReDoc:
+
+http://localhost:8000/redoc
+
+## API Endpoints
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/positions` | Retrieve all positions |
+| GET | `/api/positions/{broker}` | Retrieve positions for one broker |
+| GET | `/api/positions/{broker}/{ticker}` | Retrieve one position |
+| POST | `/api/etl-sync` | Trigger data synchronization |
+
+## ☁️ AWS Architecture
+
+### Amazon S3
+
+S3 stores raw broker responses.
+
+Purpose:
+
+Historical archives
+Data recovery
+Auditing
+
+Example:
+
+s3://finstream-bucket/
+
+archive/
+
+    20260710_120000-broker-a.json
+
+    20260710_120000-broker-b.json
+### Amazon DynamoDB
+
+DynamoDB stores normalized portfolio positions.
+
+Table design:
+
+Partition Key
+broker
+Sort Key
+ticker
+
+Example:
+
+broker	ticker	quantity	market_value
+broker-a	AAPL	100	20000
+broker-a	TSLA	50	12000
+broker-b	AAPL	200	40000
+
+This allows efficient queries:
+
+Get all positions
+Get positions by broker
+Get one position by broker + ticker
+
+## ☁️ Deployment Architecture
+
+Production deployment:
+
+```text
+React Application
+     |
+     v
+CloudFront CDN
+     |
+     v
+S3 Static Hosting
+
+API Requests
+
+     |
+     v
+
+API Gateway
+
+     |
+     v
+
+AWS Lambda
+
+     |
+     v
+
+FastAPI Application
+
+     |
+     v
+
+DynamoDB
+```
+
+## 🖥️ Frontend
+
+Built with:
+
+- React
+- TypeScript
+- Vite
+- Recharts
+- Lucide React
+
+Features:
+
+Portfolio dashboard
+Exposure visualization
+Position tables
+ETL synchronization controls
+
+Frontend communicates with FastAPI using REST APIs.
+
+## 🛠️ Technology Stack
+
+### Backend
+- Python
+- FastAPI
+- Pydantic
+- Boto3
+### Frontend
+- React
+- TypeScript
+- Vite
+- Recharts
+- Lucide React
+
+### Cloud
+* AWS Lambda
+* API Gateway
+* DynamoDB
+* S3
+* CloudFront
+* EventBridge
+
+### Testing
+- Pytest
+- Moto
+- FastAPI TestClient
+## 📂 Project Structure
 ```text
 backend/
-├── clients/                  # Raw simulated Broker API callers
-│   ├── broker_a_client.py
-│   └── broker_b_client.py
-├── domain/                   # Domain entities and enums (e.g. BrokerName)
-│   └── broker.py
-├── integrations/             # AWS Database & Storage connection modules
-│   ├── dynamodb.py
-│   └── s3.py
-├── mappers/                  # Normalization logic translating raw data to schemas
-│   ├── broker_a.py           # Broker A normalizer
-│   ├── broker_b.py           # Broker B normalizer
-│   ├── positions.py          # Unified database model mapper
-│   └── registery.py          # Normalizer lookup registry
-├── repositories/             # Database access and CRUD queries (no logic)
-│   ├── etl.py                # Database save/clear queries
-│   └── position.py           # Positions DB query logic
-├── routes/                   # FastAPI route definitions
-│   ├── brokers.py
-│   ├── etl.py
-│   └── positions.py
-├── schemas/                  # Pydantic schemas (data shapes for API responses)
-│   └── positions.py
-├── services/                 # Business logic orchestrating repositories & clients
-│   ├── broker_registery.py
-│   ├── brokers.py
-│   ├── etl.py                # Main ETL execution flow
-│   └── positions.py          # Positions compilation and fetch logic
-├── tests/                    # Pytest suite
-│   ├── __init__.py
-│   ├── conftest.py            # Global fixtures (e.g., mock table clients)
+
+├── clients/
+│   └── Broker API integrations
+│
+├── domain/
+│   └── Domain entities and enums
+│
+├── integrations/
+│   └── AWS service connections
+│
+├── mappers/
+│   └── Data transformation logic
+│
+├── repositories/
+│   └── Database operations
+│
+├── routes/
+│   └── FastAPI endpoints
+│
+├── schemas/
+│   └── Pydantic models
+│
+├── services/
+│   └── Business logic and ETL workflows
+│
+├── tests/
+│
 │   ├── unit/
-│   │   ├── __init__.py
-│   │   └── test_mappers.py    # Tests for normalizers/mappers
+│   │   └── Mapper tests
+│   │
 │   └── integration/
-│       ├── __init__.py
-│       ├── test_repos.py      # Tests database repository functions
-│       └── test_routes.py     # Tests FastAPI API endpoints
-├── handler.py                # Serverless Lambda entrypoint handler
-├── main.py                   # FastAPI local runner setup
-└── pyproject.toml            # Project dependencies and config
+│       └── API and repository tests
+│
+└── main.py
+
+frontend/
+
+├── src/
+│   ├── api.ts
+│   ├── App.tsx
+│   ├── App.css
+│   ├── index.css
+│   ├── main.tsx
+│   └── components/
+│       ├── ExposureCharts.tsx
+│       ├── MetricCard.tsx
+│       └── PositionTable.tsx
+│
+├── public/
+└── vite.config.ts
+
+root/
+
+├── template.yaml
+├── samconfig.toml
+├── deploy_frontend.sh
+└── presentation.md
 ```
 
+## Key Engineering Decisions
 
+### Layered backend
 
-### Phase 1: Python Unit Tests — ETL & Data Normalization
-Unit tests validating data mapping, conversions, and edge cases inside [mappers/](file:///Users/cyf/Desktop/Rahwa-development/FinStream/backend/mappers/):
-* **Broker A Normalization:** Validate `normalize_broker_a` translates symbol to ticker, calculates `market_value = qty * price`, and handles positive/negative quantities correctly.
-* **Broker B Normalization:** Validate `normalize_broker_b` maps keys correctly and handles data arrays.
-* **Edge Case Mapping:** Validate mappers handle missing fields, null payloads, and zero values gracefully.
+The API, service, mapper, and repository layers are intentionally separate so broker-specific logic stays isolated from persistence and HTTP concerns.
 
-### Phase 2: Python Integration Tests — API Endpoints
-Tests using `fastapi.testclient.TestClient` to verify the request/response cycle, route status codes, and JSON serialization:
-* **GET `/api/positions`:** Verify returns correct schema list.
-* **GET `/api/positions/{broker}`:** Verify returns 404 for unknown brokers and 200 with data for valid ones.
-* **POST `/api/etl-sync`:** Verify triggers the ETL flow and reports the correct number of persisted records.
-* **Exception Handlers:** Verify corrupted position mapping translates to correct HTTP response status codes.
+### Registry-based broker ingestion
 
-### Phase 3: Python Repository Tests — DynamoDB Operations
-Mocked database tests validating CRUD functionality without hitting the live AWS environment:
-* **Mocking:** Use `moto` or local mocks to intercept DynamoDB table actions safely.
-* **Clear Table:** Validate `delete_all_positions_repo` deletes all entries cleanly.
-* **Batch Writes:** Validate `save_positions_repo` persists position records correctly without duplicates.
-* **Queries & Scans:** Validate paginated scans (`scan_all_positions`), single queries (`get_position_item`), and partition key queries (`query_positions_by_broker`).
+Broker fetchers are registered in a central broker registry, which keeps the ETL workflow stable as brokers are added or swapped out.
 
----
+### Mapper-driven normalization
 
-## 🛠️ Python Testing Tech Stack
+Raw broker payloads are normalized before persistence, so downstream code only works with the shared `Position` schema.
 
-Configure your testing environment using the following standard tools:
+### Persistence-only repositories
 
-* **Framework:** `pytest` (standard Python testing framework)
-* **Mocking:** `pytest-mock` (for utility patching) & `moto` (for DynamoDB mock tables)
-* **Coverage:** `pytest-cov` (tracks lines executed)
-* **FastAPI Client:** `TestClient` (for local route testing)
+Repositories only read and write DynamoDB items. Business rules stay in services, which keeps the database layer replaceable.
 
-### Installation
-Run within your backend directory:
+### DynamoDB key design
+
+DynamoDB uses:
+
+Partition Key:
+broker
+
+Sort Key:
+ticker
+
+This design matches the application's access patterns:
+
+- Retrieve all positions
+- Retrieve positions by broker
+- Retrieve a specific ticker from a broker
+
+Using both keys allows efficient single-item retrieval with GetItem operations.
+
+### Lambda-ready backend entrypoint
+
+The app is packaged with a Lambda handler, so the same FastAPI application can run locally or behind AWS infrastructure.
+
+### S3 archival before persistence
+
+Raw broker payloads are archived to S3 before normalized positions are saved to DynamoDB, which gives you traceability for debugging and audits.
+
+### Fault Handling Strategy
+
+Broker failures are isolated during ingestion. Failed broker fetches are logged, preventing silent failures and making troubleshooting easier.
+
+Future improvements include retry strategies, circuit breakers, and alerting.
+
+## 🧪 Testing Strategy
+
+### Unit Tests
+
+Focus on pure business logic:
+
+- Broker normalization
+- Position mapping
+- Registry behaviour
+- Edge cases
+
+Examples:
+
+- Missing fields
+- Empty broker responses
+- Invalid numeric values
+- Unexpected payload formats
+
+### Repository Tests
+
+Repositories are tested separately using AWS mocks.
+
+Tools:
+
+- Moto
+- Pytest fixtures
+
+Tests validate:
+
+- DynamoDB writes
+- Queries
+- Item retrieval
+- Pagination behaviour
+
+### API Integration Tests
+
+Using FastAPI `TestClient`.
+
+Testing:
+
+- HTTP status codes
+- Response schemas
+- Validation errors
+- Exception handling
+## 📝 Logging & Error Handling
+The application uses Python logging instead of print statements.
+
+Example:
+```python
+logger.info("Starting ETL process")
+logger.warning("Broker returned empty data")
+logger.exception("Failed to fetch broker data")
+```
+
+Logging provides:
+* Better debugging
+* Production monitoring
+* CloudWatch integration
+
+## 💻 Running Locally
+
+### Backend
+
+Clone repository:
+
+git clone <repository-url>
+
+Navigate:
+
+cd backend
+
+Create environment:
+
+python -m venv .venv
+
+Activate:
+
+Mac/Linux:
+
+source .venv/bin/activate
+
+Install dependencies:
 ```bash
-pip install pytest pytest-mock moto pytest-cov
+# If using uv (recommended):
+uv sync
+
+# If using pip:
+pip install -e .
 ```
 
-### Execution
-Run tests locally with:
-```bash
-pytest
-```
+Run FastAPI:
+
+uvicorn main:app --reload
+
+Backend:
+
+http://localhost:8000
+### Frontend
+
+Navigate:
+
+cd ..
+
+cd frontend
+
+Install:
+
+npm install
+
+Run:
+
+npm run dev
+
+Frontend:
+
+http://localhost:5173
+## 🚀 Future Improvements
+
+### Event Driven ETL
+
+Replace manual ETL triggering with:
+
+EventBridge
+
+      |
+
+Lambda
+
+      |
+
+ETL Pipeline
+
+### Infrastructure as Code
+
+Add:
+
+Terraform
+Automated AWS deployment
+Environment management
+### Monitoring
+Add:
+* CloudWatch dashboards
+* Alerts
+* Metrics tracking
+
+### Security & Auth
+
+Future improvements:
+- Authentication
+- Authorization
+- API throttling
+- IAM policy hardening
+
+## Engineering Principles Applied
+
+### Separation of Concerns
+
+Each component has one responsibility.
+
+### Scalability
+Registry-based design allows adding new brokers easily.
+
+### Maintainability
+Clear boundaries between API, business logic, and persistence.
+
+### Fault Tolerance
+Broker failures are isolated and logged.
+
+### Testability
+Business logic and database operations can be tested independently.
+
+## Author
+Built as a personal fintech engineering project to develop production-style backend skills with Python, FastAPI, AWS, and cloud-native architecture.
