@@ -2,6 +2,11 @@
 venv/
 env/
 .venv/
+backend/.venv/
+backend/venv/
+frontend/.venv/
+frontend/venv/
+backend/.env
 
 # Database
 *.sqlite3

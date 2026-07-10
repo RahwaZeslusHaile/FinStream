@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, RootModel
 
 
 class BrokerAPosition(BaseModel):
@@ -14,13 +14,11 @@ class BrokerAResponse(BaseModel):
     positions: list[BrokerAPosition]
 
 
-class BrokerBResponse(BaseModel):
-    ticker: str
-    amount: Decimal
-    market_value: Decimal
-
-
 class BrokerBPosition(BaseModel):
     ticker: str
     amount: Decimal
     market_value: Decimal
+
+
+class BrokerBResponse(RootModel[list[BrokerBPosition]]):
+    pass

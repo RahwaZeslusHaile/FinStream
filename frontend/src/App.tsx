@@ -109,7 +109,7 @@ function App() {
             <Bell size={20} color="var(--text-secondary)" style={{ cursor: 'pointer' }} />
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
               <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#1f2937', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600 }}>AR</div>
-              <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Alex R.</span>
+              <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Rahwa H.</span>
             </div>
             <button className="btn-sync" onClick={handleSync} disabled={isSyncing}>
               {isSyncing ? "Syncing..." : "Sync Brokers"}

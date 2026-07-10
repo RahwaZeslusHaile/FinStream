@@ -10,6 +10,7 @@ dependencies = [
     "uvicorn>=0.49.0",
     "boto3>=1.43.34",
     "mangum>=0.21.0",
+    "python-dotenv>=1.2.2",
 ]
 
 [tool.black]
@@ -21,6 +22,7 @@ profile = "black"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["."]
 
 [tool.ruff]
 line-length = 88
