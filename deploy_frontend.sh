@@ -57,7 +57,7 @@ aws s3api put-bucket-website --bucket "$BUCKET_NAME" --website-configuration '{
         "Suffix": "index.html"
     },
     "ErrorDocument": {
-        "Suffix": "index.html"
+        "Key": "index.html"
     }
 }'
 

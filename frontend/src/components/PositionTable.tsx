@@ -5,6 +5,13 @@ interface PositionTableProps {
   positions: Position[];
 }
 
+const formatCurrency = (value: number, prefixPlus = false) => {
+  const isNegative = value < 0;
+  const formattedVal = Math.abs(value).toLocaleString(undefined, { maximumFractionDigits: 0 });
+  const sign = isNegative ? '-' : (prefixPlus ? '+' : '');
+  return `${sign}$${formattedVal}`;
+};
+
 export const PositionTable: React.FC<PositionTableProps> = ({ positions }) => {
   return (
     <div className="glass-panel" style={{ overflowX: 'auto' }}>
@@ -35,16 +42,16 @@ export const PositionTable: React.FC<PositionTableProps> = ({ positions }) => {
                 <td style={{ color: 'var(--text-secondary)' }}>{pos.broker.replace('_', ' ')}</td>
                 <td style={{ color: 'var(--text-secondary)' }}>{pos.quantity.toLocaleString()}</td>
                 <td style={{ fontWeight: 500, color: 'var(--text-primary)' }}>
-                  ${pos.market_value.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                  {formatCurrency(pos.market_value)}
                 </td>
                 <td style={{ color: 'var(--text-secondary)' }}>
-                  ${cost.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                  {formatCurrency(cost)}
                 </td>
-                <td style={{ color: 'var(--accent-green)', fontWeight: 600 }}>
-                  +${realisedPL.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                <td style={{ color: realisedPL >= 0 ? 'var(--accent-green)' : 'var(--accent-red)', fontWeight: 600 }}>
+                  {formatCurrency(realisedPL, true)}
                 </td>
-                <td style={{ color: 'var(--accent-green)', fontWeight: 600 }}>
-                  +${unrealisedPL.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                <td style={{ color: unrealisedPL >= 0 ? 'var(--accent-green)' : 'var(--accent-red)', fontWeight: 600 }}>
+                  {formatCurrency(unrealisedPL, true)}
                 </td>
               </tr>
             );
@@ -54,3 +61,4 @@ export const PositionTable: React.FC<PositionTableProps> = ({ positions }) => {
     </div>
   );
 };
+

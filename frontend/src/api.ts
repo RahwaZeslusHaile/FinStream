@@ -12,7 +12,12 @@ export const fetchPositions = async ():Promise<Position[]> => {
   if(!res.ok){
     throw new Error('Failed to fetch positions')
   }
-  return res.json()
+  const data = await res.json()
+  return data.map((pos: any) => ({
+    ...pos,
+    quantity: Number(pos.quantity),
+    market_value: Number(pos.market_value),
+  }))
 }
 
 export const triggerEtlSync = async():Promise<{message:string,positions_added:number}> =>{
