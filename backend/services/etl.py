@@ -1,3 +1,10 @@
+"""ETL synchronization service for broker portfolio data.
+
+This module coordinates the extraction, transformation, and loading (ETL)
+of financial positions from various configured brokers, archiving raw payloads
+to S3, and persisting normalized data to DynamoDB.
+"""
+
 import logging
 from datetime import datetime, timezone
 
@@ -14,7 +21,17 @@ logger = logging.getLogger(__name__)
 def get_canonical_broker(
     broker: BrokerName | str,
 ) -> BrokerName:
+    """Normalizes a broker input into its canonical BrokerName enum member.
 
+    Args:
+        broker: The broker name as a string or a BrokerName enum instance.
+
+    Returns:
+        The canonical BrokerName enum member.
+
+    Raises:
+        ValueError: If the broker name cannot be recognized or is invalid.
+    """
     if isinstance(broker, BrokerName):
         return broker
 
@@ -22,7 +39,16 @@ def get_canonical_broker(
 
 
 def fetch_broker_data() -> tuple[dict[BrokerName, dict], dict]:
- 
+    """Fetches raw portfolio payloads from all registered brokers.
+
+    Iterates through the registered brokers in the global registry and calls
+    their respective data-fetching routines.
+
+    Returns:
+        A tuple of two dictionaries:
+            - broker_data: Successfully fetched payloads keyed by canonical BrokerName.
+            - failed_brokers: Error messages keyed by the broker string name.
+    """
     broker_data = {}
     failed_brokers = {}
 
@@ -71,7 +97,14 @@ def fetch_broker_data() -> tuple[dict[BrokerName, dict], dict]:
 def archive_raw_data(
     data: dict[BrokerName, dict],
 ) -> None:
+    """Saves raw broker payloads to Amazon S3 for archival and tracking.
 
+    Uploads a timestamped copy of each payload to `archive/` and overwrites
+    the active raw payload file under `raw/`.
+
+    Args:
+        data: A dictionary mapping canonical BrokerName to raw payload data.
+    """
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
 
     for broker, payload in data.items():
@@ -91,7 +124,18 @@ def archive_raw_data(
 def load_broker_data(
     data: dict[BrokerName, dict],
 ) -> dict[BrokerName, dict]:
+    """Loads raw broker payloads from S3, falling back to in-memory data on failure.
 
+    Attempts to pull the recently archived `raw/` files from S3 to ensure
+    persistence state parity. If S3 fails or is unconfigured, it logs a warning
+    and defaults to the in-memory payloads passed in.
+
+    Args:
+        data: In-memory dictionary of canonical BrokerName to fetched payloads.
+
+    Returns:
+        A dictionary of broker payloads loaded from S3 (or the fallback).
+    """
     raw_data = {}
 
     for broker, payload in data.items():
@@ -113,7 +157,16 @@ def load_broker_data(
 def normalize_positions(
     raw_data: dict[BrokerName, dict],
 ) -> tuple[list[Position], dict]:
+    """Transforms raw broker JSON data into standardized Position models.
 
+    Args:
+        raw_data: Raw JSON payloads from each broker.
+
+    Returns:
+        A tuple of:
+            - list[Position]: Standardized Position model instances.
+            - dict[BrokerName, str]: Normalizer failure messages keyed by BrokerName.
+    """
     normalized_positions = []
     failed_normalizers = {}
 
@@ -147,7 +200,20 @@ def normalize_positions(
 
 
 def run_etl_sync_logic():
+    """Orchestrates the entire ETL synchronization workflow.
 
+    Executes the pipeline in sequential phases:
+        1. Fetch raw data from all brokers.
+        2. Archive raw payloads to S3.
+        3. Reload/verify broker data from S3.
+        4. Normalize raw payloads into standardized Position schema items.
+        5. Purge the existing active positions table in DynamoDB.
+        6. Persist normalized positions to DynamoDB.
+
+    Returns:
+        A dictionary containing an execution summary "message", list of
+        failed normalizers or brokers if aborted, and count of "positions_added".
+    """
     logger.info("Starting ETL synchronization")
 
     try:
