@@ -46,7 +46,7 @@ function App() {
         <div>
           <div className="sidebar-logo">
             <span style={{ width: '24px', height: '24px', background: 'linear-gradient(135deg, var(--accent-cyan), var(--accent-blue))', borderRadius: '6px' }}></span>
-            <span>Nova Capital</span>
+            <span>FinStream</span>
           </div>
           
           <ul className="sidebar-menu">
