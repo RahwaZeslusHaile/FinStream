@@ -35,7 +35,6 @@ function App() {
 
   const totalExposure = positions.reduce((sum, pos) => sum + pos.market_value, 0);
 
-  // Derived mock financing cost calculations
   const dailyFinancingCost = positions.reduce((sum, pos) => {
     const rate = pos.quantity > 0 ? 0.025 : 0.04;
     return sum + (Math.abs(pos.market_value) * rate) / 365;
@@ -43,12 +42,11 @@ function App() {
 
   return (
     <div className="dashboard-wrapper">
-      {/* Left Navigation Sidebar */}
       <aside className="sidebar">
         <div>
           <div className="sidebar-logo">
             <span style={{ width: '24px', height: '24px', background: 'linear-gradient(135deg, var(--accent-cyan), var(--accent-blue))', borderRadius: '6px' }}></span>
-            <span>Nova Capital</span>
+            <span>FinStream</span>
           </div>
           
           <ul className="sidebar-menu">
