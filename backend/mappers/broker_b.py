@@ -1,20 +1,60 @@
-from decimal import Decimal
+import logging
+from decimal import Decimal, InvalidOperation
 
 from domain.broker import BrokerName
 from schemas.positions import Position
 
+logger = logging.getLogger(__name__)
 
-def normalize_broker_b(data: dict) -> list[Position]:
+
+def normalize_broker_b(data: list) -> list[Position]:
+    if not isinstance(data, list):
+        raise TypeError("Input data for Broker B must be a list.")
+
     positions = []
+
     for item in data:
-        qty = Decimal(str(item["amount"]))
-        mv = Decimal(str(item["market_value"]))
+        if not isinstance(item, dict):
+            logger.warning(
+                "Skipping invalid item: %s. Expected a dictionary.",
+                item,
+            )
+            continue
+
+        ticker = item.get("ticker")
+        amount_raw = item.get("amount")
+        market_value_raw = item.get("market_value")
+
+        if not ticker or amount_raw is None or market_value_raw is None:
+            logger.warning(
+                "Skipping item due to missing required field: %s",
+                item,
+            )
+            continue
+
+        try:
+            quantity = Decimal(str(amount_raw))
+            market_value = Decimal(str(market_value_raw))
+
+        except (
+            InvalidOperation,
+            TypeError,
+            ValueError,
+        ) as exc:
+            logger.warning(
+                "Skipping item due to invalid numeric values: %s. Error: %s",
+                item,
+                exc,
+            )
+            continue
+
         positions.append(
             Position(
                 broker=BrokerName.broker_b,
-                ticker=item["ticker"],
-                quantity=qty,
-                market_value=mv,
+                ticker=ticker,
+                quantity=quantity,
+                market_value=market_value,
             )
         )
+
     return positions
