@@ -26,6 +26,9 @@ def normalize_broker_a(data: dict) -> list[Position]:
     if not isinstance(positions_data, list):
         raise ValueError("'positions' must be a list")
 
+    if not positions_data:
+        raise ValueError("'positions' list is empty")
+
     positions = []
 
     for item in positions_data:

@@ -1,5 +1,5 @@
 from domain.broker import BrokerName
-from services.broker_registery import BROKER_REGISTRY
+from services.broker_registry import BROKER_REGISTRY
 
 
 def get_broker_service(broker_name: BrokerName):
