@@ -40,3 +40,11 @@ def test_normalize_broker_b_invalid_data_type():
         match="Input data for Broker B must be a list.",
     ):
         normalize_broker_b({"not": "a_list"})
+
+
+def test_normalize_broker_b_empty_list():
+    with pytest.raises(
+        ValueError,
+        match="Input data for Broker B is empty.",
+    ):
+        normalize_broker_b([])

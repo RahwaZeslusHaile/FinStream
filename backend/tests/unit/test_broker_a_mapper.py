@@ -48,3 +48,8 @@ def test_normalize_broker_a_invalid_data_type():
 
     with pytest.raises(ValueError):
         normalize_broker_a({"source": "Broker_A"})
+
+
+def test_normalize_broker_a_empty_positions():
+    with pytest.raises(ValueError, match="'positions' list is empty"):
+        normalize_broker_a({"source": "Broker_A", "positions": []})

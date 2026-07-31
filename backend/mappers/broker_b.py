@@ -11,6 +11,9 @@ def normalize_broker_b(data: list) -> list[Position]:
     if not isinstance(data, list):
         raise TypeError("Input data for Broker B must be a list.")
 
+    if not data:
+        raise ValueError("Input data for Broker B is empty.")
+
     positions = []
 
     for item in data:
