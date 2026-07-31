@@ -9,11 +9,12 @@ import logging
 from datetime import datetime, timezone
 
 from domain.broker import BrokerName, normalize_broker_name
+from domain.position import consolidate_positions
 from integrations.s3 import load_raw, save_raw
-from mappers.registery import NORMALIZER_REGISTRY
+from mappers.registry import NORMALIZER_REGISTRY
 from repositories.etl import delete_all_positions_repo, save_positions_repo
 from schemas.positions import Position
-from services.broker_registery import BROKER_REGISTRY
+from services.broker_registry import BROKER_REGISTRY
 
 logger = logging.getLogger(__name__)
 
@@ -246,6 +247,8 @@ def run_etl_sync_logic():
 
         logger.info("Normalizing positions...")
         positions, failed_normalizers = normalize_positions(raw_data)
+
+        positions = consolidate_positions(positions)
 
         if failed_normalizers:
             logger.error(
