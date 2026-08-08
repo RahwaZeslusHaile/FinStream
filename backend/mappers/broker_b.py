@@ -51,13 +51,20 @@ def normalize_broker_b(data: list) -> list[Position]:
             )
             continue
 
-        positions.append(
-            Position(
+        try:
+            position = Position(
                 broker=BrokerName.broker_b,
                 ticker=ticker,
                 quantity=quantity,
                 market_value=market_value,
             )
-        )
+        except ValueError:
+            logger.exception(
+                "Pydantic validation failed for position: %s",
+                item,
+            )
+            continue
+
+        positions.append(position)
 
     return positions
