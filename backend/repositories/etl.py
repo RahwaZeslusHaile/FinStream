@@ -1,8 +1,12 @@
+import logging
+
 from integrations.dynamodb import table
+
+logger = logging.getLogger(__name__)
 
 
 def delete_all_positions_repo():
-    print("🧹 Clearing existing positions in DynamoDB...")
+    logger.info("Clearing existing positions in DynamoDB...")
     scan_params = {"ProjectionExpression": "broker, ticker"}
     while True:
         response = table.scan(**scan_params)
@@ -19,7 +23,7 @@ def delete_all_positions_repo():
 
 
 def save_positions_repo(positions):
-    print(f"💾 Persisting {len(positions)} positions to DynamoDB...")
+    logger.info("Persisting %s positions to DynamoDB...", len(positions))
 
     with table.batch_writer() as batch:
         for pos in positions:
@@ -32,4 +36,4 @@ def save_positions_repo(positions):
                 }
             )
 
-    print(f"✅ Saved {len(positions)} positions to DynamoDB")
+    logger.info("Saved %s positions to DynamoDB", len(positions))
