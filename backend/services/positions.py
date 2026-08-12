@@ -17,6 +17,7 @@ def get_all_positions_service() -> list[Position]:
             status_code=404,
             detail="No positions found.",
         )
+    positions_data = sorted(positions_data, key=lambda item: item["broker"])
     return [map_to_position(item) for item in positions_data]
 
 
